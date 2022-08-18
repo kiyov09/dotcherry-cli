@@ -1,6 +1,8 @@
 extern crate dotenv;
 extern crate notify;
 
+mod cli_args;
+
 use futures::executor::block_on;
 
 use dotenv::dotenv;
@@ -19,27 +21,11 @@ use notify::{watcher, RecursiveMode, Watcher};
 use postgrest::Postgrest;
 use std::{fs::read_to_string, path::Path, process::Command, sync::mpsc::channel, time::Duration};
 
-use clap::Parser;
-
-#[derive(Debug, Parser)]
-#[clap(author, version, about, long_about = None)]
-struct CliArgs {
-    /// Dot file to parse
-    dot_file: String,
-
-    /// Watch for changes to the dot file and re-run the program
-    #[clap(short, long, value_parser, default_value = "false")]
-    watch: bool,
-
-    /// Generate a permanent link to the resulting graph
-    #[clap(short, long, value_parser, default_value = "false")]
-    permanent: bool,
-}
 
 #[tokio::main]
 async fn main() {
 
-    let clap_args = CliArgs::parse();
+    let clap_args = cli_args::get_cli_args();
     let path = &clap_args.dot_file;
     let watch = clap_args.watch;
 
@@ -168,7 +154,7 @@ async fn insert_on_db(code: &str) -> Result<(), Box<dyn std::error::Error>> {
     let client = get_postgrest_client();
 
     let graph = Gragh {
-        name: "Testing from rust".to_string(),
+        name: "RUST IS COOL".to_string(),
         user_id: "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string(),
         code: code.to_string()
     };
