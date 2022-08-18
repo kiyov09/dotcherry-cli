@@ -45,8 +45,6 @@ fn read_and_render(path: &Path) {
 }
 
 fn render_dot(str: &str) {
-    // let g: Graph = parse(str).unwrap();
-
     let parse_result = parse(str);
 
     // If parsing failed, print the error and skip rendering
@@ -55,11 +53,11 @@ fn render_dot(str: &str) {
         return;
     }
 
-    let g = parse_result.unwrap();
+    let parsed_code = parse_result.unwrap();
 
     // Generate the svg file
     let result = exec(
-        g,
+        parsed_code,
         &mut PrinterContext::default(),
         vec![
             CommandArg::Format(Format::Svg),
