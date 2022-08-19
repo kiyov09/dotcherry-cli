@@ -30,7 +30,7 @@ impl Graph {
 
         let builder = client.from(GRAPH_TABLE_NAME);
         let operation = match &self.id {
-            Some(id) => builder.eq("id", id.as_str()).update(&self.code_to_string().unwrap()),
+            Some(id) => builder.eq("id", id.as_str()).update(&self.partial_to_string().unwrap()),
             None => builder.insert(&self.to_string().unwrap())
         };
         let resp = operation.execute().await?;
@@ -43,7 +43,7 @@ impl Graph {
         serde_json::to_string(self)
     }
 
-    fn code_to_string(&self) -> serde_json::Result<String> {
+    fn partial_to_string(&self) -> serde_json::Result<String> {
         let partial = serde_json::json!({
             "code": self.code.clone(),
             "name": self.name.clone(),
