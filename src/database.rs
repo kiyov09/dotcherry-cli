@@ -17,6 +17,8 @@ static GRAPH_TABLE_NAME: &str = "graphs";
 
 #[derive(Debug, Serialize)]
 struct Graph {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<String>,
     name: String,
     user_id: String,
     code: String
@@ -26,17 +28,13 @@ impl Graph {
     async fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let client = get_postgrest_client();
 
-        let resp = client
-            .from(GRAPH_TABLE_NAME)
-            .insert(
-                self.to_string().unwrap()
-            )
-            .execute()
-            .await?;
-
-        let body = resp.text().await?;
-
-        println!("{:}", body);
+        let builder = client.from(GRAPH_TABLE_NAME);
+        let operation = match &self.id {
+            Some(id) => builder.eq("id", id.as_str()).update(&self.code_to_string().unwrap()),
+            None => builder.insert(&self.to_string().unwrap())
+        };
+        let resp = operation.execute().await?;
+        let _body = resp.text().await?;
 
         Ok(())
     }
@@ -44,11 +42,20 @@ impl Graph {
     fn to_string(&self) -> serde_json::Result<String> {
         serde_json::to_string(self)
     }
+
+    fn code_to_string(&self) -> serde_json::Result<String> {
+        let partial = serde_json::json!({
+            "code": self.code.clone(),
+            "name": self.name.clone(),
+        });
+        serde_json::to_string(&partial)
+    }
 }
 
 pub async fn insert_on_db(code: &str) -> Result<(), Box<dyn std::error::Error>> {
     let graph = Graph {
-        name: "Inserted from Graph method".to_string(),
+        id: Some("25e007b9-f12b-4396-899f-5d1cd454ab98".to_string()),
+        name: "After adding id (Updated)".to_string(),
         user_id: "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string(),
         code: code.to_string()
     };
