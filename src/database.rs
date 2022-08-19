@@ -28,8 +28,8 @@ fn get_supabase_url() -> Option<String> {
 }
 
 fn get_postgrest_client() -> postgrest::Postgrest {
-    let supabase_api_key = get_supabase_key().unwrap();
-    let supabase_api_url = get_supabase_url().unwrap();
+    let supabase_api_key = env!("SUPABASE_API_KEY");
+    let supabase_api_url = env!("SUPABASE_API_URL");
 
     Postgrest::new(supabase_api_url).insert_header("apikey", supabase_api_key)
 }
