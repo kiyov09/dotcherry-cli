@@ -53,15 +53,13 @@ impl Graph {
     }
 }
 
-pub async fn insert_on_db(code: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn save_graph(name: &str, code: &str) -> Result<(), Box<dyn std::error::Error>> {
     let graph = Graph {
-        id: Some("25e007b9-f12b-4396-899f-5d1cd454ab98".to_string()),
-        name: "After adding id (Updated v2)".to_string(),
+        id: None,
+        name: name.to_string(),
         user_id: "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string(),
         code: code.to_string()
     };
-
     graph.save().await?;
-
     Ok(())
 }

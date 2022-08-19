@@ -35,12 +35,21 @@ async fn main() {
     }
 }
 
+fn filename_from_path(path: &Path) -> String {
+    path.file_stem().unwrap()
+        .to_str().unwrap()
+        .to_string()
+}
+
 fn read_and_render(path: &Path) {
+    let file_name = filename_from_path(path);
     let content = read_to_string(path).unwrap();
+
+    // This line is for local testing purposes
     render_dot(&content);
 
     // Save on db
-    let _result = block_on(database::insert_on_db(&content));
+    let _result = block_on(database::save_graph(&file_name, &content));
 }
 
 fn render_dot(str: &str) {
@@ -79,3 +88,14 @@ fn reload_active_tab_on_chrome() {
     Command::new("chrome-cli").arg("reload").output().unwrap();
 }
 
+// Test section start here
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn filename_from_path_works() {
+        let path = super::Path::new("/home/user/graph.dot");
+        let file_name = super::filename_from_path(path);
+        assert_eq!(file_name, "graph");
+    }
+}
