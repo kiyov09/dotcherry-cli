@@ -1,4 +1,3 @@
-extern crate dotenv;
 extern crate notify;
 
 mod cli_args;
