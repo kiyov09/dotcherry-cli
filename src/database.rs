@@ -16,13 +16,13 @@ fn get_postgrest_client() -> postgrest::Postgrest {
 static GRAPH_TABLE_NAME: &str = "graphs";
 
 #[derive(Debug, Serialize)]
-struct Gragh {
+struct Graph {
     name: String,
     user_id: String,
     code: String
 }
 
-impl Gragh {
+impl Graph {
     async fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let client = get_postgrest_client();
 
@@ -47,7 +47,7 @@ impl Gragh {
 }
 
 pub async fn insert_on_db(code: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let graph = Gragh {
+    let graph = Graph {
         name: "Inserted from Graph method".to_string(),
         user_id: "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string(),
         code: code.to_string()
