@@ -9,7 +9,6 @@ use std::{
     path::Path,
     process::Command,
 };
-use futures::executor::block_on;
 use graphviz_rust::{
     cmd::{CommandArg, Format},
     exec, parse,
@@ -49,7 +48,12 @@ fn read_and_render(path: &Path) {
     render_dot(&content);
 
     // Save on db
-    let _result = block_on(database::save_graph(&file_name, &content));
+    tokio::spawn(async move {
+        let save_result = database::save_graph(&file_name, &content).await;
+        if let Err(e) = save_result {
+            println!("Error saving graph: {}", e);
+        }
+    });
 }
 
 fn render_dot(str: &str) {
