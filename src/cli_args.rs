@@ -6,6 +6,10 @@ pub struct CliArgs {
     /// Dot file to parse
     pub dot_file: String,
 
+    /// Id of the graph to update
+    #[clap(short, long, value_parser, name = "graph_id")]
+    pub update: Option<String>,
+
     /// Watch for changes to the dot file and re-run the program
     #[clap(short, long, value_parser, default_value = "false")]
     pub watch: bool,
@@ -16,5 +20,5 @@ pub struct CliArgs {
 }
 
 pub fn get_cli_args() -> CliArgs {
-  CliArgs::parse()
+    CliArgs::parse()
 }

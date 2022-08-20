@@ -1,33 +1,30 @@
 use std::{path::Path, sync::mpsc::channel, time::Duration};
+use notify::{watcher, RecursiveMode, Watcher, DebouncedEvent};
+use crate::database;
 
-use notify::{watcher, RecursiveMode, Watcher};
-
-pub fn init_watcher(path: &Path, on_change: &dyn Fn(&Path)) {
-    // Create a channel to receive the events.
+pub async fn init_watcher(path: &Path, graph: &mut database::Graph) {
     let (tx, rx) = channel();
 
-    // Create a watcher object, delivering debounced events.
-    // The notification back-end is selected based on the platform.
     let mut watcher = watcher(tx, Duration::from_secs(0)).unwrap();
-
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
     watcher.watch(path, RecursiveMode::NonRecursive).unwrap();
 
     loop {
         match rx.recv() {
             Ok(event) => match event {
-                notify::DebouncedEvent::Create(path) => {
-                    println!("The file {:?} has been created", &path);
-                    on_change(&path);
-                }
-                notify::DebouncedEvent::Write(path) => {
-                    println!("The file {:?} has been written to", &path);
-                    on_change(&path);
+                DebouncedEvent::Create(path) | DebouncedEvent::Write(path)  => {
+                    println!("Change detected. Saving graph...");
+                    let (graph_name, graph_code) = crate::get_graph_info_from_dot_file(&path);
+                    update_graph_and_save(graph, &graph_name, &graph_code).await;
                 }
                 _ => (),
             },
             Err(e) => println!("watch error: {:?}", e),
         }
     }
+}
+
+async fn update_graph_and_save(graph: &mut database::Graph, graph_name: &str, graph_code: &str) {
+    graph.set_name(graph_name);
+    graph.set_code(graph_code);
+    graph.save().await.unwrap();
 }

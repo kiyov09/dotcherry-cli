@@ -1,10 +1,7 @@
-use std::{
-    env,
-    result::Result
-};
+use std::{env, result::Result};
 
-use serde::Serialize;
 use postgrest::Postgrest;
+use serde::Serialize;
 use serde_json::Value;
 
 fn get_postgrest_client() -> postgrest::Postgrest {
@@ -17,43 +14,34 @@ fn get_postgrest_client() -> postgrest::Postgrest {
 static GRAPH_TABLE_NAME: &str = "graphs";
 
 #[derive(Debug, Serialize)]
-struct Graph {
+pub struct Graph {
     #[serde(skip_serializing_if = "Option::is_none")]
-    id: Option<String>,
+    pub id: Option<String>,
     name: String,
     user_id: String,
-    code: String
+    code: String,
 }
 
-// static mut GRAPH_INSTANCE: Graph = Graph {
-//     id: None,
-//     name: String::new(),
-//     user_id: String::new(),
-//     code: String::new()
-// };
-static mut GRAPH_INSTANCE: Option<Graph> = None ;
-
 impl Graph {
-    fn new() -> Self  {
+    pub fn new() -> Self {
         Self {
             id: None,
             name: String::new(),
-            user_id: String::new(),
-            code: String::new()
+            user_id: "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string(),
+            code: String::new(),
         }
     }
 
-    fn get_instance() -> &'static mut Graph {
-        unsafe {
-            match GRAPH_INSTANCE {
-                Some(ref mut graph) => graph,
-                None => {
-                    let graph = Graph::new();
-                    GRAPH_INSTANCE = Some(graph);
-                    GRAPH_INSTANCE.as_mut().unwrap()
-                }
-            }
-        }
+    pub fn set_id(&mut self, id: Option<String>) {
+        self.id = id;
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
+    }
+
+    pub fn set_code(&mut self, code: &str) {
+        self.code = code.to_string();
     }
 
     fn to_serde_string(&self) -> String {
@@ -68,39 +56,62 @@ impl Graph {
         serde_json::to_string(&partial).unwrap()
     }
 
-    async fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    async fn insert(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let client = get_postgrest_client();
 
-        let builder = client.from(GRAPH_TABLE_NAME);
-        let operation = match &self.id {
-            Some(id) => builder.eq("id", id.as_str())
-                               .update(&self.partial_to_serde_string()),
-            None => builder.insert(&self.to_serde_string())
-        };
-        let resp = operation.execute().await?;
-        let body = resp.text().await?;
+        let resp_body = client
+            .from(GRAPH_TABLE_NAME)
+            .insert(self.to_serde_string())
+            .execute()
+            .await?
+            .text()
+            .await?;
 
-        let as_json: Value = serde_json::from_str(&body).unwrap();
-        if let Value::Array(arr) = as_json {
-            if !arr.is_empty() {
-                let graph = arr[0].as_object().unwrap();
-                let id = graph.get("id").unwrap().as_str().unwrap().to_string();
-                self.id = Some(id);
-            }
-        }
+        let id = get_id_from_response_body(&resp_body);
+        self.set_id(id);
 
         Ok(())
     }
+
+    async fn update(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let client = get_postgrest_client();
+
+        client
+            .from(GRAPH_TABLE_NAME)
+            .eq("id", self.id.as_ref().unwrap())
+            .update(self.partial_to_serde_string())
+            .execute()
+            .await?
+            .text()
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn save(&mut self) -> Result<String, Box<dyn std::error::Error>> {
+        let operation_result = if self.id.is_none() {
+            self.insert().await
+        } else {
+            self.update().await
+        };
+
+        match operation_result {
+            Ok(_) => Ok(self.id.as_ref().unwrap().clone()),
+            Err(e) => Err(e),
+        }
+    }
 }
 
-pub async fn save_graph(name: &str, code: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut graph = Graph::get_instance();
+fn get_id_from_response_body(resp_body: &str) -> Option<String> {
+    let as_json: Value = serde_json::from_str(resp_body).unwrap();
 
-    graph.name = name.to_string();
-    graph.user_id = "7febcbe7-a9d4-48b4-99c5-8c1f290ae934".to_string();
-    graph.code = code.to_string();
+    if let Value::Array(arr) = as_json {
+        if !arr.is_empty() {
+            let graph = arr[0].as_object().unwrap();
+            let id = graph.get("id").unwrap().as_str().unwrap().to_string();
+            return Some(id);
+        }
+    }
 
-    graph.save().await?;
-
-    Ok(())
+    None
 }
