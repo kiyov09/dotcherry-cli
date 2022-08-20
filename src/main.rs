@@ -1,5 +1,3 @@
-extern crate notify;
-
 mod cli_args;
 mod file_watcher;
 mod database;
